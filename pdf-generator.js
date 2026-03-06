@@ -1,16 +1,14 @@
 const PDFDocument = require('pdfkit');
 
-// ── COLORS ──
 const C = {
-  dark:    '#0d1a1f',
-  accent:  '#5ab5d4',
-  text:    '#1e3238',
-  muted:   '#5a8a9a',
-  light:   '#ebf5f8',
-  border:  '#c8dce4',
-  white:   '#ffffff',
-  success: '#28b478',
-  amber:   '#fff8eb',
+  dark:        '#0d1a1f',
+  accent:      '#5ab5d4',
+  text:        '#1e3238',
+  muted:       '#5a8a9a',
+  light:       '#ebf5f8',
+  border:      '#c8dce4',
+  white:       '#ffffff',
+  amber:       '#fff8eb',
   amberBorder: '#dcb978',
 };
 
@@ -19,363 +17,316 @@ function generatePDF(data) {
     try {
       const doc = new PDFDocument({ size: 'LETTER', margin: 0, bufferPages: true });
       const chunks = [];
-      doc.on('data', chunk => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('data', c => chunks.push(c));
+      doc.on('end',  () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
       const PW = 612, PH = 792;
-      const M = 40;
-      const W = PW - M * 2;
-      let y = M;
-      let pageNum = 1;
+      const M  = 36;
+      const W  = PW - M * 2;
+      let   y  = M;
+      let   pageNum = 1;
 
-      // ── HELPERS ──
-      function hex(h) {
-        const r = parseInt(h.slice(1,3),16);
-        const g = parseInt(h.slice(3,5),16);
-        const b = parseInt(h.slice(5,7),16);
-        return [r,g,b];
+      function t(str, x, ty, opts = {}) {
+        doc.text(String(str ?? ''), x, ty, { lineBreak: false, ...opts });
       }
 
-      function fill(color) { doc.fillColor(color); }
-      function stroke(color) { doc.strokeColor(color); }
-
-      function rect(x, y, w, h, fillColor, strokeColor) {
-        if (fillColor) { doc.rect(x, y, w, h).fill(fillColor); }
-        if (strokeColor) { doc.rect(x, y, w, h).stroke(strokeColor); }
-        if (fillColor && strokeColor) { doc.rect(x, y, w, h).fillAndStroke(fillColor, strokeColor); }
-      }
-
-      function text(str, x, ty, opts = {}) {
-        doc.text(String(str || ''), x, ty, { lineBreak: false, ...opts });
-      }
-
-      function formatDate(s) {
+      function fmt(s) {
         if (!s) return '—';
-        const parts = s.split('-');
-        if (parts.length < 3) return s;
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return `${months[parseInt(parts[1])-1]} ${parseInt(parts[2])}, ${parts[0]}`;
+        const p = s.split('-');
+        if (p.length < 3) return s;
+        const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${mo[parseInt(p[1])-1]} ${parseInt(p[2])}, ${p[0]}`;
       }
 
       function addFooter() {
-        doc.fillColor(C.dark).rect(0, PH - 36, PW, 36).fill();
+        doc.fillColor(C.dark).rect(0, PH - 32, PW, 32).fill();
         doc.fillColor(C.muted).fontSize(7).font('Helvetica');
-        text(`DAILY FIELD REPORT  ·  ${data.projectName}  ·  ${formatDate(data.reportDate)}`, M, PH - 22);
-        doc.fillColor(C.muted).fontSize(7);
-        const pageStr = `Page ${pageNum}`;
-        const pw = doc.widthOfString(pageStr);
-        text(pageStr, PW - M - pw, PH - 22);
+        t(`DAILY FIELD REPORT  ·  ${data.projectName}  ·  ${fmt(data.reportDate)}`, M, PH - 20);
+        const pg = `Page ${pageNum}`;
+        t(pg, PW - M - doc.widthOfString(pg), PH - 20);
       }
 
       function addPageHeader() {
-        doc.fillColor(C.dark).rect(0, 0, PW, 32).fill();
+        doc.fillColor(C.dark).rect(0, 0, PW, 28).fill();
         doc.fillColor(C.accent).fontSize(7).font('Helvetica-Bold');
-        text('DAILY FIELD REPORT', M, 12);
+        t('DAILY FIELD REPORT', M, 10);
         doc.fillColor(C.muted).font('Helvetica').fontSize(7);
         const mid = `${data.projectNumber} — ${data.projectName}`;
-        const mw = doc.widthOfString(mid);
-        text(mid, PW/2 - mw/2, 12);
-        const dr = formatDate(data.reportDate);
-        const dw = doc.widthOfString(dr);
-        text(dr, PW - M - dw, 12);
-        y = 52;
-      }
-
-      function newPage() {
-        addFooter();
-        doc.addPage({ size: 'LETTER', margin: 0 });
-        pageNum++;
-        addPageHeader();
-      }
-
-      function checkPage(needed = 40) {
-        if (y + needed > PH - 50) newPage();
+        t(mid, PW/2 - doc.widthOfString(mid)/2, 10);
+        const dr = fmt(data.reportDate);
+        t(dr, PW - M - doc.widthOfString(dr), 10);
+        y = 44;
       }
 
       function sectionHeader(title) {
-        checkPage(36);
-        doc.fillColor(C.dark).rect(M, y, W, 22).fill();
-        doc.fillColor(C.accent).rect(M, y, 4, 22).fill();
-        doc.fillColor(C.accent).fontSize(8).font('Helvetica-Bold');
-        text(title.toUpperCase(), M + 14, y + 7);
-        y += 26;
+        doc.fillColor(C.dark).rect(M, y, W, 18).fill();
+        doc.fillColor(C.accent).rect(M, y, 4, 18).fill();
+        doc.fillColor(C.accent).fontSize(7.5).font('Helvetica-Bold');
+        t(title.toUpperCase(), M + 12, y + 5);
+        y += 22;
       }
 
-      function labelVal(label, value, x, w) {
-        const bh = 32;
-        checkPage(bh + 4);
-        doc.fillColor(C.light).rect(x, y, w, bh).fill();
-        doc.strokeColor(C.border).lineWidth(0.5).rect(x, y, w, bh).stroke();
-        doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
-        text(label.toUpperCase(), x + 8, y + 8);
-        doc.fillColor(C.text).fontSize(9).font('Helvetica');
-        text(String(value || '—'), x + 8, y + 20, { width: w - 16, lineBreak: false, ellipsis: true });
+      function infoCell(label, value, x, w) {
+        const h = 26;
+        doc.fillColor(C.light).rect(x, y, w, h).fill();
+        doc.strokeColor(C.border).lineWidth(0.4).rect(x, y, w, h).stroke();
+        doc.fillColor(C.muted).fontSize(6).font('Helvetica-Bold');
+        t(label.toUpperCase(), x + 6, y + 5);
+        doc.fillColor(C.text).fontSize(8.5).font('Helvetica');
+        t(String(value || '—'), x + 6, y + 15, { width: w - 12, ellipsis: true });
       }
 
       function textBlock(label, content) {
         if (!content) return;
-        const lines = doc.fontSize(9).font('Helvetica').heightOfString(content, { width: W - 20 });
-        const bh = Math.max(52, lines + 28);
-        checkPage(bh + 10);
+        const lh = doc.fontSize(8.5).font('Helvetica').heightOfString(content, { width: W - 16 });
+        const bh = Math.max(40, lh + 22);
         doc.fillColor(C.light).rect(M, y, W, bh).fill();
-        doc.strokeColor(C.border).lineWidth(0.5).rect(M, y, W, bh).stroke();
-        doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
-        text(label.toUpperCase(), M + 8, y + 8);
-        doc.fillColor(C.text).fontSize(9).font('Helvetica');
-        doc.text(content, M + 8, y + 20, { width: W - 16, lineBreak: true });
-        y += bh + 8;
+        doc.strokeColor(C.border).lineWidth(0.4).rect(M, y, W, bh).stroke();
+        doc.fillColor(C.muted).fontSize(6).font('Helvetica-Bold');
+        t(label.toUpperCase(), M + 6, y + 5);
+        doc.fillColor(C.text).fontSize(8.5).font('Helvetica');
+        doc.text(content, M + 6, y + 15, { width: W - 12, lineBreak: true });
+        y += bh + 5;
       }
 
-      // ════════════════════════════════
-      // PAGE 1 — COVER
-      // ════════════════════════════════
+      // ════════════════════════════════════════════
+      // PAGE 1 — SECTIONS 1–6
+      // ════════════════════════════════════════════
 
-      // Top bar
-      doc.fillColor(C.dark).rect(0, 0, PW, 90).fill();
-      doc.fillColor(C.accent).rect(0, 88, PW, 3).fill();
+      // Cover bar
+      doc.fillColor(C.dark).rect(0, 0, PW, 76).fill();
+      doc.fillColor(C.accent).rect(0, 74, PW, 2).fill();
 
-      // Logo (if provided as base64)
       if (data.logoBase64) {
         try {
-          const logoBuffer = Buffer.from(data.logoBase64, 'base64');
-          doc.image(logoBuffer, 14, 12, { width: 66, height: 66, fit: [66, 66] });
-        } catch(e) { /* skip if logo fails */ }
+          doc.image(Buffer.from(data.logoBase64, 'base64'), 12, 10, { width: 54, height: 54, fit: [54, 54] });
+        } catch(e) {}
       }
 
-      // Title
-      doc.fillColor(C.white).fontSize(22).font('Helvetica-Bold');
-      text('DAILY FIELD REPORT', 92, 32);
-      doc.fillColor(C.accent).fontSize(9).font('Helvetica');
-      text('PLAYSAFE CONSTRUCTION INC', 92, 58);
+      doc.fillColor(C.white).fontSize(20).font('Helvetica-Bold');
+      t('DAILY FIELD REPORT', 78, 22);
+      doc.fillColor(C.accent).fontSize(8.5).font('Helvetica');
+      t('PLAYSAFE CONSTRUCTION INC', 78, 48);
 
-      // Date box
-      doc.fillColor('#1e3648').rect(PW - 156, 14, 116, 62).fill();
-      doc.fillColor(C.muted).fontSize(7).font('Helvetica-Bold');
-      const dlabel = 'REPORT DATE';
-      const dlw = doc.widthOfString(dlabel);
-      text(dlabel, PW - 156 + (116 - dlw) / 2, 26);
-      doc.fillColor(C.accent).fontSize(11).font('Helvetica-Bold');
-      const dval = formatDate(data.reportDate);
-      const dvw = doc.widthOfString(dval);
-      text(dval, PW - 156 + (116 - dvw) / 2, 42);
+      doc.fillColor('#1e3648').rect(PW - 138, 10, 106, 56).fill();
+      doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
+      const dlbl = 'REPORT DATE';
+      t(dlbl, PW - 138 + (106 - doc.widthOfString(dlbl)) / 2, 22);
+      doc.fillColor(C.accent).fontSize(10.5).font('Helvetica-Bold');
+      const dv = fmt(data.reportDate);
+      t(dv, PW - 138 + (106 - doc.widthOfString(dv)) / 2, 36);
       if (data.dayNumber) {
-        doc.fillColor(C.muted).fontSize(7.5).font('Helvetica');
+        doc.fillColor(C.muted).fontSize(7).font('Helvetica');
         const ds = `Day ${data.dayNumber} of Project`;
-        const dsw = doc.widthOfString(ds);
-        text(ds, PW - 156 + (116 - dsw) / 2, 60);
+        t(ds, PW - 138 + (106 - doc.widthOfString(ds)) / 2, 52);
       }
 
-      y = 106;
+      y = 84;
 
-      // ── 01 PROJECT INFO ──
+      // 01 Project Info
       sectionHeader('01  Project Information');
+      const c3 = W / 3;
+      infoCell('Project #',    data.projectNumber,        M,        c3);
+      infoCell('Project Name', data.projectName,          M + c3,   c3);
+      infoCell('Report Date',  fmt(data.reportDate),      M + c3*2, c3);
+      y += 27;
+      infoCell('Site Address', data.siteAddress,          M,        c3 * 2);
+      infoCell('Day #',        data.dayNumber || '—',     M + c3*2, c3);
+      y += 27;
+      infoCell('Foreman / Prepared By', data.preparedBy,  M,        W);
+      y += 30;
 
-      const col3 = W / 3;
-      labelVal('Project Number', data.projectNumber, M, col3);
-      labelVal('Project Name', data.projectName, M + col3, col3);
-      labelVal('Report Date', formatDate(data.reportDate), M + col3 * 2, col3);
-      y += 34;
-
-      labelVal('Site Address / Location', data.siteAddress, M, col3 * 2);
-      labelVal('Day # of Project', data.dayNumber || '—', M + col3 * 2, col3);
-      y += 34;
-
-      labelVal('Foreman / Report Prepared By', data.preparedBy, M, W);
-      y += 38;
-
-      // ── 02 WEATHER ──
+      // 02 Weather
       sectionHeader('02  Weather Conditions');
-
-      const col3w = W / 3;
-      labelVal('AM Temp', data.tempAM ? `${data.tempAM}°F` : '—', M, col3w);
-      labelVal('PM Temp', data.tempPM ? `${data.tempPM}°F` : '—', M + col3w, col3w);
-      labelVal('Wind Speed', data.windSpeed ? `${data.windSpeed} mph` : '—', M + col3w * 2, col3w);
-      y += 34;
-
+      infoCell('AM Temp',    data.tempAM    ? `${data.tempAM}°F`      : '—', M,        c3);
+      infoCell('PM Temp',    data.tempPM    ? `${data.tempPM}°F`      : '—', M + c3,   c3);
+      infoCell('Wind Speed', data.windSpeed ? `${data.windSpeed} mph`  : '—', M+c3*2,  c3);
+      y += 27;
       if (data.weatherConditions && data.weatherConditions.length > 0) {
-        labelVal('Sky Conditions', data.weatherConditions.join('  |  '), M, W);
-        y += 34;
+        infoCell('Sky Conditions', data.weatherConditions.join('  |  '), M, W);
+        y += 27;
       }
-
       if (data.weatherNotes) textBlock('Weather Delays / Notes', data.weatherNotes);
 
-      // ── 03 CREW ──
-      checkPage(60);
+      // 03 Crew — 2-column compact layout
       sectionHeader('03  Crew & Personnel');
-
       if (data.crewList && data.crewList.length > 0) {
-        const cols = [W * 0.55, W * 0.45];
-        const headers = ['Name', 'Role'];
+        const half  = Math.ceil(data.crewList.length / 2);
+        const col1  = data.crewList.slice(0, half);
+        const col2  = data.crewList.slice(half);
+        const colW  = (W - 8) / 2;
+        const rowH  = 16;
+        const nameW = colW * 0.58;
 
-        // Header row
-        doc.fillColor(C.dark).rect(M, y, W, 20).fill();
-        doc.fillColor(C.muted).fontSize(7).font('Helvetica-Bold');
-        let rx = M;
-        headers.forEach((h, i) => {
-          text(h.toUpperCase(), rx + 6, y + 7);
-          rx += cols[i];
+        // Column headers
+        [M, M + colW + 8].forEach(cx => {
+          doc.fillColor(C.dark).rect(cx, y, colW, 16).fill();
+          doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
+          t('NAME', cx + 5, y + 5);
+          t('ROLE', cx + nameW + 5, y + 5);
         });
-        y += 20;
+        y += 16;
 
-        data.crewList.forEach((w, ri) => {
-          checkPage(24);
-          doc.fillColor(ri % 2 === 0 ? C.white : C.light).rect(M, y, W, 22).fill();
-          doc.strokeColor(C.border).lineWidth(0.5).rect(M, y, W, 22).stroke();
-          doc.fillColor(C.text).fontSize(8.5).font('Helvetica');
-          rx = M;
-          [w.name, w.role].forEach((val, i) => {
-            text(String(val || ''), rx + 6, y + 7);
-            rx += cols[i];
+        const maxRows = Math.max(col1.length, col2.length);
+        for (let i = 0; i < maxRows; i++) {
+          const bg = i % 2 === 0 ? C.white : C.light;
+          [0, 1].forEach(side => {
+            const cx   = side === 0 ? M : M + colW + 8;
+            const item = side === 0 ? col1[i] : col2[i];
+            doc.fillColor(bg).rect(cx, y, colW, rowH).fill();
+            doc.strokeColor(C.border).lineWidth(0.3).rect(cx, y, colW, rowH).stroke();
+            if (item) {
+              doc.fillColor(C.text).fontSize(7.5).font('Helvetica');
+              t(item.name || '', cx + 5, y + 4, { width: nameW - 8, ellipsis: true });
+              doc.fillColor(C.muted).fontSize(7);
+              t(item.role || '', cx + nameW + 5, y + 4);
+            }
           });
-          y += 22;
-        });
+          y += rowH;
+        }
         y += 6;
       } else {
-        doc.fillColor(C.muted).fontSize(9).font('Helvetica');
-        text('No crew entries recorded.', M + 8, y + 6); y += 24;
+        doc.fillColor(C.muted).fontSize(8.5).font('Helvetica');
+        t('No crew selected.', M + 6, y + 4); y += 20;
       }
 
-      // ── 04 EQUIPMENT ──
-      checkPage(60);
+      // 04 Equipment
       sectionHeader('04  Equipment On-Site');
-
       if (data.equipList && data.equipList.length > 0) {
-        const ecols = [W * 0.60, W * 0.40];
-        const eheads = ['Equipment Description', 'Owner / Rental'];
-
-        doc.fillColor(C.dark).rect(M, y, W, 20).fill();
-        doc.fillColor(C.muted).fontSize(7).font('Helvetica-Bold');
-        let ex = M;
-        eheads.forEach((h, i) => { text(h.toUpperCase(), ex + 6, y + 7); ex += ecols[i]; });
-        y += 20;
-
+        const ec = [W * 0.60, W * 0.40];
+        doc.fillColor(C.dark).rect(M, y, W, 16).fill();
+        doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
+        t('EQUIPMENT DESCRIPTION', M + 5, y + 5);
+        t('OWNER / RENTAL', M + ec[0] + 5, y + 5);
+        y += 16;
         data.equipList.forEach((eq, ri) => {
-          checkPage(24);
-          doc.fillColor(ri % 2 === 0 ? C.white : C.light).rect(M, y, W, 22).fill();
-          doc.strokeColor(C.border).lineWidth(0.5).rect(M, y, W, 22).stroke();
-          doc.fillColor(C.text).fontSize(8.5).font('Helvetica');
-          ex = M;
-          [eq.desc, eq.owner].forEach((val, i) => {
-            text(String(val || ''), ex + 6, y + 7);
-            ex += ecols[i];
-          });
-          y += 22;
+          doc.fillColor(ri % 2 === 0 ? C.white : C.light).rect(M, y, W, 16).fill();
+          doc.strokeColor(C.border).lineWidth(0.3).rect(M, y, W, 16).stroke();
+          doc.fillColor(C.text).fontSize(7.5).font('Helvetica');
+          t(eq.desc || '', M + 5, y + 4, { width: ec[0] - 10, ellipsis: true });
+          doc.fillColor(C.muted).fontSize(7);
+          t(eq.owner || '', M + ec[0] + 5, y + 4);
+          y += 16;
         });
         y += 6;
       } else {
-        doc.fillColor(C.muted).fontSize(9).font('Helvetica');
-        text('No equipment entries recorded.', M + 8, y + 6); y += 24;
+        doc.fillColor(C.muted).fontSize(8.5).font('Helvetica');
+        t('No equipment recorded.', M + 6, y + 4); y += 20;
       }
 
-      // ════════════════════════════════
-      // PAGE 2 — WORK & DELAYS
-      // ════════════════════════════════
-      newPage();
-
-      // ── 05 WORK PERFORMED ──
+      // 05 Work Performed
       sectionHeader('05  Work Performed Today');
       textBlock('Description of Work Performed', data.workDescription);
       textBlock('Materials Delivered / Used', data.materials);
 
-      // ── 06 DELAYS & ISSUES ──
+      // 06 Delays & Issues
       sectionHeader('06  Delays & Issues');
-
       if (data.delays || data.issues) {
         const half = (W - 6) / 2;
-        const dlHeight = data.delays
-          ? doc.fontSize(9).font('Helvetica').heightOfString(data.delays, { width: half - 20 })
-          : 0;
-        const isHeight = data.issues
-          ? doc.fontSize(9).font('Helvetica').heightOfString(data.issues, { width: half - 20 })
-          : 0;
-        const bh = Math.max(52, Math.max(dlHeight, isHeight) + 28);
-        checkPage(bh + 10);
-
+        const dlH  = data.delays ? doc.fontSize(8.5).font('Helvetica').heightOfString(data.delays, { width: half - 14 }) : 0;
+        const isH  = data.issues ? doc.fontSize(8.5).font('Helvetica').heightOfString(data.issues, { width: half - 14 }) : 0;
+        const bh   = Math.max(42, Math.max(dlH, isH) + 22);
         if (data.delays) {
           doc.fillColor(C.amber).rect(M, y, half, bh).fill();
-          doc.strokeColor(C.amberBorder).lineWidth(0.5).rect(M, y, half, bh).stroke();
-          doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
-          text('DELAYS', M + 8, y + 8);
-          doc.fillColor(C.text).fontSize(9).font('Helvetica');
-          doc.text(data.delays, M + 8, y + 20, { width: half - 16, lineBreak: true });
+          doc.strokeColor(C.amberBorder).lineWidth(0.4).rect(M, y, half, bh).stroke();
+          doc.fillColor(C.muted).fontSize(6).font('Helvetica-Bold');
+          t('DELAYS', M + 6, y + 5);
+          doc.fillColor(C.text).fontSize(8.5).font('Helvetica');
+          doc.text(data.delays, M + 6, y + 15, { width: half - 12, lineBreak: true });
         }
-
         if (data.issues) {
           doc.fillColor(C.light).rect(M + half + 6, y, half, bh).fill();
-          doc.strokeColor(C.border).lineWidth(0.5).rect(M + half + 6, y, half, bh).stroke();
-          doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
-          text('ISSUES / PROBLEMS', M + half + 14, y + 8);
-          doc.fillColor(C.text).fontSize(9).font('Helvetica');
-          doc.text(data.issues, M + half + 14, y + 20, { width: half - 16, lineBreak: true });
+          doc.strokeColor(C.border).lineWidth(0.4).rect(M + half + 6, y, half, bh).stroke();
+          doc.fillColor(C.muted).fontSize(6).font('Helvetica-Bold');
+          t('ISSUES / PROBLEMS', M + half + 12, y + 5);
+          doc.fillColor(C.text).fontSize(8.5).font('Helvetica');
+          doc.text(data.issues, M + half + 12, y + 15, { width: half - 12, lineBreak: true });
         }
-
-        y += bh + 10;
+        y += bh + 6;
       } else {
-        doc.fillColor(C.muted).fontSize(9).font('Helvetica');
-        text('No delays or issues recorded.', M + 8, y + 6); y += 24;
+        doc.fillColor(C.muted).fontSize(8.5).font('Helvetica');
+        t('No delays or issues recorded.', M + 6, y + 4); y += 20;
       }
 
-      // ════════════════════════════════
-      // PHOTO PAGES (up to 12 photos, 6 per page)
-      // ════════════════════════════════
+      addFooter();
+
+      // ════════════════════════════════════════════
+      // PHOTO PAGES — 6 per page, fit (no crop/overlap)
+      // ════════════════════════════════════════════
       if (data.images && data.images.length > 0) {
-        const PHOTOS_PER_PAGE = 6;
-        const imgW = (W - 12) / 2;
-        const imgH = imgW * 0.65;
+        const COLS = 2, ROWS = 3, PER = 6;
 
-        for (let pi = 0; pi < data.images.length; pi += PHOTOS_PER_PAGE) {
-          newPage();
-          const pagePhotos = data.images.slice(pi, pi + PHOTOS_PER_PAGE);
-          const pageIndex = Math.floor(pi / PHOTOS_PER_PAGE) + 1;
-          const totalPages = Math.ceil(data.images.length / PHOTOS_PER_PAGE);
-          const sectionTitle = totalPages > 1
+        for (let pi = 0; pi < data.images.length; pi += PER) {
+          doc.addPage({ size: 'LETTER', margin: 0 });
+          pageNum++;
+          addPageHeader(); // y = 44
+
+          const pagePhotos = data.images.slice(pi, pi + PER);
+          const pageIndex  = Math.floor(pi / PER) + 1;
+          const totalPages = Math.ceil(data.images.length / PER);
+          sectionHeader(totalPages > 1
             ? `07  Site Photos (${pageIndex} of ${totalPages})`
-            : '07  Site Photos';
+            : '07  Site Photos'); // y advances 22
 
-          sectionHeader(sectionTitle);
+          // Fixed slot grid — all slots same size, no overlap possible
+          const GAPX   = 10;
+          const GAPY   = 10;
+          const slotW  = Math.floor((W - GAPX) / COLS);
+          const availH = PH - y - 32 - 8;   // footer + padding
+          const slotH  = Math.floor((availH - (ROWS - 1) * GAPY) / ROWS);
 
-          let col = 0;
-          let rowY = y;
+          for (let i = 0; i < pagePhotos.length; i++) {
+            const img  = pagePhotos[i];
+            const col  = i % COLS;
+            const row  = Math.floor(i / COLS);
+            const sx   = M + col * (slotW + GAPX);
+            const sy   = y + row * (slotH + GAPY);
 
-          for (const img of pagePhotos) {
-            const ix = col === 0 ? M : M + imgW + 12;
+            // Background slot
+            doc.fillColor(C.light).rect(sx, sy, slotW, slotH).fill();
+            doc.strokeColor(C.border).lineWidth(0.4).rect(sx, sy, slotW, slotH).stroke();
 
-            // Photo background
-            doc.fillColor(C.light).rect(ix, rowY, imgW, imgH).fill();
-            doc.strokeColor(C.border).lineWidth(0.5).rect(ix, rowY, imgW, imgH).stroke();
-
-            // Draw image
             if (img.dataUrl) {
               try {
-                const base64Data = img.dataUrl.split(',')[1];
-                const imgBuffer = Buffer.from(base64Data, 'base64');
-                doc.image(imgBuffer, ix, rowY, { width: imgW, height: imgH, cover: [imgW, imgH] });
-                doc.strokeColor(C.border).lineWidth(0.5).rect(ix, rowY, imgW, imgH).stroke();
-              } catch(e) { /* skip bad image */ }
+                const buf    = Buffer.from(img.dataUrl.split(',')[1], 'base64');
+                const opened = doc.openImage(buf);
+                // Scale to fit within slot, preserve aspect ratio
+                const scale  = Math.min(slotW / opened.width, slotH / opened.height);
+                const iw     = Math.floor(opened.width  * scale);
+                const ih     = Math.floor(opened.height * scale);
+                // Center within slot
+                const ix     = sx + Math.floor((slotW - iw) / 2);
+                const iy     = sy + Math.floor((slotH - ih) / 2);
+                doc.image(buf, ix, iy, { width: iw, height: ih });
+                // Redraw border on top
+                doc.strokeColor(C.border).lineWidth(0.4).rect(sx, sy, slotW, slotH).stroke();
+              } catch(e) {
+                doc.fillColor(C.muted).fontSize(8).font('Helvetica');
+                t('Image unavailable', sx + 5, sy + slotH / 2 - 5);
+              }
             }
 
-            // Caption bar
+            // Caption
             if (img.caption) {
-              doc.fillColor('rgba(13,26,31,0.75)').rect(ix, rowY + imgH - 20, imgW, 20).fill();
-              doc.fillColor('#dddddd').fontSize(7.5).font('Helvetica-Oblique');
-              text(img.caption, ix + 6, rowY + imgH - 13, { width: imgW - 12, lineBreak: false, ellipsis: true });
+              const capH = 18;
+              doc.fillColor('rgba(13,26,31,0.72)').rect(sx, sy + slotH - capH, slotW, capH).fill();
+              doc.fillColor('#dddddd').fontSize(7).font('Helvetica-Oblique');
+              t(img.caption, sx + 5, sy + slotH - capH + 5, { width: slotW - 10, ellipsis: true });
             }
 
-            col++;
-            if (col === 2) {
-              rowY += imgH + 12;
-              col = 0;
-            }
+            // Photo number badge (top-left)
+            doc.fillColor(C.dark).rect(sx + 4, sy + 4, 20, 13).fill();
+            doc.fillColor(C.accent).fontSize(7).font('Helvetica-Bold');
+            const num = String(pi + i + 1);
+            t(num, sx + 4 + (20 - doc.widthOfString(num)) / 2, sy + 6);
           }
-          y = rowY + (col !== 0 ? imgH + 12 : 0);
+
+          addFooter();
         }
       }
 
-      // ── FINALIZE ──
-      addFooter();
       doc.end();
-
     } catch(err) {
       reject(err);
     }
