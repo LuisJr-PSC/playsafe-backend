@@ -160,7 +160,7 @@ app.post('/submit-report', async (req, res) => {
 
     // Send via Resend with PDF attached
     await resend.emails.send({
-      from: 'PlaySafe Field Reports <reports@resend.dev>',
+      from: 'PlaySafe Field Reports <reports@youractualdomain.com>',
       to: recipients,
       subject: `Daily Field Report — ${data.projectName} — ${data.reportDate}`,
       html: emailHtml,
