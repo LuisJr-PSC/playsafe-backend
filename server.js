@@ -180,7 +180,7 @@ app.post('/submit-report', async (req, res) => {
 
     // Send via Resend with PDF attached
     const { error: sendError } = await resend.emails.send({
-      from: 'PlaySafe Field Reports <reports@yourdomain.com>',
+      from: 'PlaySafe Field Reports <reports@playsafeconstruction.com>',
       to: recipients,
       subject: `Daily Field Report — ${data.projectName} — ${data.reportDate}`,
       html: emailHtml,
