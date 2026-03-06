@@ -328,19 +328,23 @@ function generatePDF(data) {
           const psiBuf = Buffer.from(data.psiDocBase64, 'base64');
           doc.addPage({ size: 'LETTER', margin: 0 });
           pageNum++;
-          // Fill page with white background
-          doc.fillColor(C.white).rect(0, 0, PW, PH).fill();
-          // Fit image to full page with small margin, preserve aspect ratio
+          addPageHeader(); // draws top bar, sets y = 44
+
+          // Section title
+          sectionHeader('08  PSI Report'); // advances y by 22
+
+          // Fit image in remaining space below header
           const psiMargin = 14;
-          const maxW = PW - psiMargin * 2;
-          const maxH = PH - psiMargin * 2;
-          // Open image to get dimensions
-          const opened = doc.openImage(psiBuf);
-          const aspect = opened.width / opened.height;
+          const imgTop  = y + 4;
+          const imgBot  = PH - 32 - 8; // above footer
+          const maxW    = PW - psiMargin * 2;
+          const maxH    = imgBot - imgTop;
+          const opened  = doc.openImage(psiBuf);
+          const aspect  = opened.width / opened.height;
           let drawW = maxW, drawH = maxW / aspect;
           if (drawH > maxH) { drawH = maxH; drawW = maxH * aspect; }
           const ox = psiMargin + (maxW - drawW) / 2;
-          const oy = psiMargin + (maxH - drawH) / 2;
+          const oy = imgTop + (maxH - drawH) / 2;
           doc.image(psiBuf, ox, oy, { width: drawW, height: drawH });
           addFooter();
         } catch(e) {
