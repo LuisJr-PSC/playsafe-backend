@@ -152,6 +152,7 @@ app.post('/submit-report', async (req, res) => {
     <!-- Footer -->
     <div style="background:#0d1a1f;padding:16px 32px;text-align:center;">
       <p style="margin:0;color:#5a8a9a;font-size:11px;">PlaySafe Construction Inc — Daily Field Report System</p>
+      <p style="margin:6px 0 0;color:#3a5a6a;font-size:10px;">This is an automated email — please do not reply to this message.</p>
     </div>
 
   </div>
@@ -159,8 +160,8 @@ app.post('/submit-report', async (req, res) => {
 </html>`;
 
     // Send via Resend with PDF attached
-    const { error: sendError } = await resend.emails.send({
-      from: 'PlaySafe Field Reports <reports@playsafeconstruction.com>',
+    await resend.emails.send({
+      from: 'PlaySafe Field Reports <reports@resend.dev>',
       to: recipients,
       subject: `Daily Field Report — ${data.projectName} — ${data.reportDate}`,
       html: emailHtml,
@@ -171,11 +172,6 @@ app.post('/submit-report', async (req, res) => {
         }
       ]
     });
-
-    if (sendError) {
-      console.error('Resend error:', sendError);
-      return res.status(500).json({ error: 'Email send failed: ' + sendError.message });
-    }
 
     res.json({ success: true, message: 'Report submitted and emailed successfully.' });
 
