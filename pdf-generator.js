@@ -245,6 +245,19 @@ function generatePDF(data) {
         t('No delays or issues recorded.', M + 6, y + 4); y += 20;
       }
 
+      // 07 Project Progress
+      if (data.projectProgress) {
+        sectionHeader('07  Project Progress');
+        const statusColor = data.projectProgress === 'Done / Complete' ? '#2a7a4b' : '#1e5f8a';
+        const statusBg    = data.projectProgress === 'Done / Complete' ? '#e8f7ee' : '#e8f2fb';
+        const statusBdr   = data.projectProgress === 'Done / Complete' ? '#7ecba1' : '#7ab8e8';
+        doc.fillColor(statusBg).rect(M, y, W, 26).fill();
+        doc.strokeColor(statusBdr).lineWidth(0.5).rect(M, y, W, 26).stroke();
+        doc.fillColor(statusColor).fontSize(9.5).font('Helvetica-Bold');
+        t(data.projectProgress, M + 12, y + 8);
+        y += 32;
+      }
+
       addFooter();
 
       // ════════════════════════════════════════════
@@ -263,7 +276,7 @@ function generatePDF(data) {
           const totalPages = Math.ceil(data.images.length / PER);
           sectionHeader(totalPages > 1
             ? `07  Site Photos (${pageIndex} of ${totalPages})`
-            : '07  Site Photos'); // y advances 22
+            : '08  Site Photos'); // y advances 22
 
           // Fixed slot grid — all slots same size, no overlap possible
           const GAPX   = 10;
@@ -331,7 +344,7 @@ function generatePDF(data) {
           addPageHeader(); // draws top bar, sets y = 44
 
           // Section title
-          sectionHeader('08  PSI Report'); // advances y by 22
+          sectionHeader('09  PSI Report'); // advances y by 22
 
           // Fit image in remaining space below header
           const psiMargin = 14;
