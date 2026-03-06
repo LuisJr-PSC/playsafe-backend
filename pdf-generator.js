@@ -157,14 +157,12 @@ function generatePDF(data) {
         const col2  = data.crewList.slice(half);
         const colW  = (W - 8) / 2;
         const rowH  = 16;
-        const nameW = colW * 0.58;
 
-        // Column headers
+        // Column headers — names only
         [M, M + colW + 8].forEach(cx => {
           doc.fillColor(C.dark).rect(cx, y, colW, 16).fill();
           doc.fillColor(C.muted).fontSize(6.5).font('Helvetica-Bold');
           t('NAME', cx + 5, y + 5);
-          t('ROLE', cx + nameW + 5, y + 5);
         });
         y += 16;
 
@@ -178,9 +176,7 @@ function generatePDF(data) {
             doc.strokeColor(C.border).lineWidth(0.3).rect(cx, y, colW, rowH).stroke();
             if (item) {
               doc.fillColor(C.text).fontSize(7.5).font('Helvetica');
-              t(item.name || '', cx + 5, y + 4, { width: nameW - 8, ellipsis: true });
-              doc.fillColor(C.muted).fontSize(7);
-              t(item.role || '', cx + nameW + 5, y + 4);
+              t(item.name || '', cx + 5, y + 4, { width: colW - 10, ellipsis: true });
             }
           });
           y += rowH;
@@ -323,6 +319,32 @@ function generatePDF(data) {
           }
 
           addFooter();
+        }
+      }
+
+      // ── PSI DOCUMENT PAGE ──
+      if (data.psiDocBase64) {
+        try {
+          const psiBuf = Buffer.from(data.psiDocBase64, 'base64');
+          doc.addPage({ size: 'LETTER', margin: 0 });
+          pageNum++;
+          // Fill page with white background
+          doc.fillColor(C.white).rect(0, 0, PW, PH).fill();
+          // Fit image to full page with small margin, preserve aspect ratio
+          const psiMargin = 14;
+          const maxW = PW - psiMargin * 2;
+          const maxH = PH - psiMargin * 2;
+          // Open image to get dimensions
+          const opened = doc.openImage(psiBuf);
+          const aspect = opened.width / opened.height;
+          let drawW = maxW, drawH = maxW / aspect;
+          if (drawH > maxH) { drawH = maxH; drawW = maxH * aspect; }
+          const ox = psiMargin + (maxW - drawW) / 2;
+          const oy = psiMargin + (maxH - drawH) / 2;
+          doc.image(psiBuf, ox, oy, { width: drawW, height: drawH });
+          addFooter();
+        } catch(e) {
+          console.error('PSI image error:', e.message);
         }
       }
 
