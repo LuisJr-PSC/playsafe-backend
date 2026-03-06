@@ -51,6 +51,22 @@ app.post('/submit-report', async (req, res) => {
     ].filter(Boolean);
     const weatherStr = weatherParts.join('  ·  ') || '—';
 
+    // Pre-compute project progress block (avoids nested template literals)
+    let progressHtml = '';
+    if (data.projectProgress) {
+      const isDone = data.projectProgress === 'Done / Complete';
+      const bg  = isDone ? '#e8f7ee' : '#e8f2fb';
+      const clr = isDone ? '#2a7a4b' : '#1e5f8a';
+      const bdr = isDone ? '#7ecba1' : '#7ab8e8';
+      progressHtml = `
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:#5ab5d4;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid #ebf5f8;padding-bottom:6px;margin-bottom:10px;">Project Progress</div>
+        <div style="display:inline-block;padding:6px 16px;border-radius:4px;font-size:13px;font-weight:700;background:${bg};color:${clr};border:1px solid ${bdr};">
+          ${data.projectProgress}
+        </div>
+      </div>`;
+    }
+
     // Build HTML email body
     const emailHtml = `
 <!DOCTYPE html>
@@ -141,6 +157,9 @@ app.post('/submit-report', async (req, res) => {
           <p style="margin:0;font-size:12px;color:#1e3238;line-height:1.5;">${data.issues || 'None'}</p>
         </div>
       </div>
+
+      <!-- Project Progress -->
+      ${progressHtml}
 
       <!-- Photo count note -->
       <div style="background:#ebf5f8;border:1px solid #c8dce4;padding:10px 14px;border-radius:4px;font-size:12px;color:#5a8a9a;">
